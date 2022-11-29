@@ -4,7 +4,7 @@
 import asyncio
 import subprocess
 import sys
-from sanic import Sanic, response
+from flask import Flask, request, jsonify
 
 try:
   port += 1
@@ -13,9 +13,6 @@ except NameError:
   # (This is a hack to avoid "address already in use" errors when running the cell multiple times)
 
 if 'google.colab' in sys.modules:
-
-  Sanic._app_registry = {}
-  # (We need this to remove the already created app if running the cell multiple times)
 
   # Start the ngrok tunnel
 
@@ -43,43 +40,36 @@ user_src.init()
 
 # Create the http server app.
 
-
-app = Sanic("my_app")
+server = Flask(__name__)
 
 # Healthchecks verify that the environment is correct on Banana Serverless
-@app.route('/healthcheck', methods=["GET"])
-def healthcheck(request):
+@server.route('/healthcheck', methods=['GET'])
+def healthcheck():
   # dependency free way to check if GPU is visible
   gpu = False
   out = subprocess.run("nvidia-smi", shell=True)
   if out.returncode == 0: # success state on shell command
     gpu = True
-
-  return response.json({"state": "healthy", "gpu": gpu})
+  # return {"state": "healthy", "gpu": gpu}
+  # Flask:
+  return jsonify({"state": "healthy", "gpu": gpu})
 
 # Inference POST handler at '/' is called for every http call from Banana
-@app.route('/', methods=["POST"]) 
-def inference(request):
-  try:
-    model_inputs = response.json.loads(request.json)
-  except:
-    model_inputs = request.json
+@server.route('/', methods=['POST'])
+def inference():
+  model_inputs = request.get_json()
 
   output = user_src.inference(model_inputs)
 
-  return response.json(output)
+  return jsonify(output)
 
 
 if __name__ == '__main__':
-  # # app.run(host='0.0.0.0', port=port, workers=1, single_process=True, loop=asyncio.get_event_loop())
-  # server = app.create_server(host='0.0.0.0', port=port)
-  # loop = asyncio.get_event_loop()
-  # task = asyncio.ensure_future(server)
-  # loop.run_forever()
-  async def start_server():
-    server = app.create_server(host='0.0.0.0', port=port)
-    loop = asyncio.get_event_loop()
-    task = asyncio.ensure_future(server)
-    loop.run_forever()
-    
-  
+  # Start the  server in a new thread
+  print("Starting server")
+  import threading
+  server_thread = threading.Thread(target=server.run, kwargs={"host": "0.0.0.0", "port": port})
+  server_thread.start()
+  # Keep the colab notebook running
+  while True:
+    pass
