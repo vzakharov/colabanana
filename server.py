@@ -1,7 +1,9 @@
-#@ Start the server
-#@markdown ## 👈 Copy the contents of `server.py` here
+#@title Start the server
+#@markdown Usually, you don’t need to change anything in this cell. However, if you change the `server.py` file, double-click on the cell to edit the code and paste its  contents.
 
 import asyncio
+import datetime
+import time
 import subprocess
 import sys
 from flask import Flask, request, jsonify
@@ -26,7 +28,7 @@ if 'google.colab' in sys.modules:
 
   ngrok_tunnel = ngrok.connect(port)
   print(ngrok_tunnel)
-  print("This is the public URL of your server ☝️☝️☝️")
+  print("This is the public URL of your server ☝️☝️☝️ (you can also use https)")
   # The public URL will be printed to the console after this line, so look for it there
 
 else:
@@ -39,8 +41,16 @@ else:
 user_src.init()
 
 # Create the http server app.
-
-server = Flask(__name__)
+try:
+  # First let's kill the server and its server_thread if it's already running (on Colab)
+  del server
+  del server_thread
+  print("Stopped running server")
+except ( AssertionError, NameError ):
+  pass
+  
+# Use timestamp in server name for debug purposes
+server = Flask(f"server-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
 
 # Healthchecks verify that the environment is correct on Banana Serverless
 @server.route('/healthcheck', methods=['GET'])
@@ -50,19 +60,46 @@ def healthcheck():
   out = subprocess.run("nvidia-smi", shell=True)
   if out.returncode == 0: # success state on shell command
     gpu = True
-  # return {"state": "healthy", "gpu": gpu}
-  # Flask:
-  return jsonify({"state": "healthy", "gpu": gpu})
+  return jsonify(dict(
+    state="healthy",
+    gpu=gpu,
+    timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  ))
 
 # Inference POST handler at '/' is called for every http call from Banana
 @server.route('/', methods=['POST'])
 def inference():
   model_inputs = request.get_json()
+  print(f"Received request: {model_inputs}")
 
   output = user_src.inference(model_inputs)
+  print(f"Sending response: {output}")
 
   return jsonify(output)
 
+# GET /test to call a sample inference using the public URL from ngrok_tunnel
+@server.route('/test', methods=['GET'])
+def test_endpoint():
+  url = ngrok_tunnel.public_url
+  print(f"Sending a test inference request to {url}")
+
+  # Take model_inputs from query params
+  model_inputs = request.args.to_dict()
+
+  print(f"Request: {model_inputs}")
+  print("✂=== Below are logs from the server processing the test request\n")
+
+  if not 'google.colab' in sys.modules:
+    from test import test_inference
+  else:
+    global test_inference
+    # (If testing with colab, the test interface is defined in the cell above)
+
+  res = test_inference(model_inputs)
+
+  print("\n✂=== End of logs from the server processing the test request")
+  print(f"Response: {res.json()}")
+  return jsonify(res.json())
 
 if __name__ == '__main__':
   # Start the  server in a new thread
@@ -70,6 +107,12 @@ if __name__ == '__main__':
   import threading
   server_thread = threading.Thread(target=server.run, kwargs={"host": "0.0.0.0", "port": port})
   server_thread.start()
-  # Keep the colab notebook running
-  while True:
-    pass
+  # Print that the server is started and a test URL after a second (so the server has time to start)
+  time.sleep(1)
+  print(f"Server started; test: {ngrok_tunnel.public_url}/test")
+
+  # On Colab, keep the cell running so we can see the logs
+  if 'google.colab' in sys.modules:
+    print("Keeping the cell running so you can see the server logs")
+    while True:
+      time.sleep(1)

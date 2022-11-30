@@ -1,20 +1,23 @@
 #@ Define model init/inference functions
 #@markdown ## 👈 Copy the contents of `app.py` here
 
-import sys 
 from transformers import pipeline
 import torch
 
 # Init is ran on server startup
 # Load your model to GPU as a global variable here using the variable name "model"
 def init():
+  
+    # 🚧🚧🚧 Service code needed to avoid reloading the model every time the cell is run in Colab; ignore until 🛣️🛣️🛣️
     global model
 
     try:
       model
       print("Model already loaded")
     except NameError:
+    # 🛣️🛣️🛣️ End of service code; proceed with your code below
 
+  
       device = 0 if torch.cuda.is_available() else -1
       model = pipeline('fill-mask', model='bert-base-uncased', device=device)
       
@@ -37,6 +40,12 @@ def inference(model_inputs:dict) -> dict:
 
     # Return the results as a dictionary
     return result
+
+
+
+# 🚧🚧🚧 Some service code again; ignore everything below this line
+
+import sys 
 
 # If testing with Colab, define a user_src object which has attributes for init and inference
 # Check if imported modules include google.colab

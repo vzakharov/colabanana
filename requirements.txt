@@ -1,3 +1,8 @@
-sanic==22.6.2
+# Basic, needed for the server to run
+flask
+pyngrok
+banana_dev
+
+# Model-specific
 transformers
 accelerate

@@ -11,16 +11,21 @@ from transformers import pipeline
 
 def download_model_weights():
 
+  # 🚧🚧🚧 Service code to avoid downloading the model every time the cell is run in Colab; ignore until the next 🚧🚧🚧
   try:
 
     weights_downloaded
     # Hereinafter, this trick allows us to avoid downloading the model whenever the cell is run. Once the model is downloaded for the first time, the variable `weights_downloaded` is set to True, so no error is raised and the model (which is downloaded in the except block) is not downloaded again.
 
   except NameError:
+  # 🛣️🛣️🛣️ End of service code; proceed with your code below
+  
     
     # do a dry run of loading the huggingface model, which will download weights
     pipeline('fill-mask', model='bert-base-uncased')
 
+
+  # 🚧🚧🚧 Ignore all code below this line
     weights_downloaded = True
 
 if __name__ == "__main__":
