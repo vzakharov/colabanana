@@ -32,19 +32,3 @@ def inference(model_inputs:dict) -> dict:
 
     # Return the results as a dictionary
     return result
-
-
-
-# 🚧🚧🚧 Some service code again; ignore everything below this line
-
-import sys 
-
-# If testing with Colab, define a user_src object which has attributes for init and inference
-# Check if imported modules include google.colab
-if 'google.colab' in sys.modules:
-  class UserSrc:
-    def __init__(self):
-      self.init = init
-      self.inference = inference
-
-  user_src = UserSrc()

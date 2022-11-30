@@ -14,12 +14,16 @@ except NameError:
   port = 8000
   # (This is a hack to avoid "address already in use" errors when running the cell multiple times)
 
-if 'google.colab' in sys.modules:
+if not 'google.colab' in sys.modules:
+
+  import app as user_src
+
+else:
+
+  # Define a user_src object which has attributes for init and inference
+  user_src = type('UserSrc', (object,), {'init': init, 'inference': inference})
 
   # Start the ngrok tunnel
-
-  from pyngrok import ngrok
-
   print("Starting tunnel")
 
   for tunnel in ngrok.get_tunnels():
@@ -30,11 +34,6 @@ if 'google.colab' in sys.modules:
   print(ngrok_tunnel)
   print("This is the public URL of your server ☝️☝️☝️ (you can also use https)")
   # The public URL will be printed to the console after this line, so look for it there
-
-else:
-
-  import app as user_src
-  # (If testing with colab, the app interface is defined in the cell above)
 
 # We do the model load-to-GPU step on server startup
 # so the model object is available globally for reuse
