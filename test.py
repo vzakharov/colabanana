@@ -29,7 +29,6 @@ import json
 import os
 import requests
 import sys
-import banana_dev as banana
 
 def test_inference(model_inputs={}):
 
@@ -102,7 +101,11 @@ def test_inference(model_inputs={}):
           f.write(json.dumps(credentials))
           print("Saved credentials to credentials.json")
 
-      res = banana.run(credentials['api_key'], credentials['model_key'], model_inputs)
+      res = requests.post("https://api.banana.dev/start/v4/", json=dict(
+        apiKey = credentials['api_key'],
+        modelKey = credentials['model_key'],
+        modelInputs = model_inputs
+      )).json()
 
     else:
 
