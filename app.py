@@ -8,20 +8,12 @@ import torch
 # Load your model to GPU as a global variable here using the variable name "model"
 def init():
   
-    # 🚧🚧🚧 Service code needed to avoid reloading the model every time the cell is run in Colab; ignore until 🛣️🛣️🛣️
     global model
-
-    try:
-      model
-      print("Model already loaded")
-    except NameError:
-    # 🛣️🛣️🛣️ End of service code; proceed with your code below
-
   
-      device = 0 if torch.cuda.is_available() else -1
-      model = pipeline('fill-mask', model='bert-base-uncased', device=device)
-      
-      print("Model loaded")
+    device = 0 if torch.cuda.is_available() else -1
+    model = pipeline('fill-mask', model='bert-base-uncased', device=device)
+    
+    print("Model loaded")
 
 # Inference is ran for every server call
 # Reference your preloaded global model variable here.
