@@ -77,29 +77,29 @@ def inference():
 
   return jsonify(output)
 
-# GET /test to call a sample inference using the public URL from ngrok_tunnel
-@server.route('/test', methods=['GET'])
-def test_endpoint():
-  url = ngrok_tunnel.public_url
-  print(f"Sending a test inference request to {url}")
+if 'google.colab' in sys.modules:
 
-  # Take model_inputs from query params
-  model_inputs = request.args.to_dict()
+  # GET /test to call a sample inference using the public URL from ngrok_tunnel
+  @server.route('/test', methods=['GET'])
+  def test_endpoint():
 
-  print(f"Request: {model_inputs}")
-  print("✂=== Below are logs from the server processing the test request\n")
 
-  if not 'google.colab' in sys.modules:
-    from test import test_inference
-  else:
     global test_inference
-    # (If testing with colab, the test interface is defined in the cell above)
 
-  res = test_inference(model_inputs)
+    url = ngrok_tunnel.public_url
+    print(f"Sending a test inference request to {url}")
 
-  print("\n✂=== End of logs from the server processing the test request")
-  print(f"Response: {res.json()}")
-  return jsonify(res.json())
+    # Take model_inputs from query params
+    model_inputs = request.args.to_dict()
+
+    print(f"Request: {model_inputs}")
+    print("✂=== Below are logs from the server processing the test request\n")
+
+    res = test_inference(model_inputs)
+
+    print("\n✂=== End of logs from the server processing the test request")
+    print(f"Response: {res.json()}")
+    return jsonify(res.json())
 
 if __name__ == '__main__':
   # Start the  server in a new thread
@@ -107,12 +107,13 @@ if __name__ == '__main__':
   import threading
   server_thread = threading.Thread(target=server.run, kwargs={"host": "0.0.0.0", "port": port})
   server_thread.start()
-  # Print that the server is started and a test URL after a second (so the server has time to start)
-  time.sleep(1)
-  print(f"Server started; test: {ngrok_tunnel.public_url}/test")
 
-  # On Colab, keep the cell running so we can see the logs
   if 'google.colab' in sys.modules:
+    # Print that the server is started and a test URL after a second (so the server has time to start)
+    time.sleep(1)
+    print(f"Server started; test: {ngrok_tunnel.public_url}/test")
+
+    # Keep the cell running so we can see the logs
     print("Keeping the cell running so you can see the server logs")
     while True:
       time.sleep(1)
