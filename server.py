@@ -6,6 +6,8 @@ import datetime
 import time
 import subprocess
 import sys
+
+import numpy as np
 from flask import Flask, request, jsonify
 from pyngrok import ngrok
 
@@ -18,11 +20,18 @@ except NameError:
 if not 'google.colab' in sys.modules:
 
   import app as user_src
+  user_src.init()
 
 else:
 
-  # Define a user_src object which has attributes for init and inference
-  user_src = type('UserSrc', (object,), {'init': init, 'inference': inference})
+  try:
+    user_src
+    print("Model already initialized")
+  except NameError:
+    # Define a user_src object which has attributes for init and inference
+    user_src = type('UserSrc', (object,), {'init': init, 'inference': inference})
+    print("Initializing model...")
+    user_src.init()
 
   # Start the ngrok tunnel
   print("Starting tunnel")
@@ -38,7 +47,6 @@ else:
 
 # We do the model load-to-GPU step on server startup
 # so the model object is available globally for reuse
-user_src.init()
 
 # Create the http server app.
 try:
@@ -74,6 +82,17 @@ def inference():
 
   output = user_src.inference(model_inputs)
   print(f"Sending response: {output}")
+
+  # If the output is an ndarray, convert it to a list (of lists, of lists, etc.)
+  if isinstance(output, np.ndarray):
+    # Go recursively through each dimension and convert to list
+    def convert_to_list(x):
+      if isinstance(x, np.ndarray):
+        return [convert_to_list(y) for y in x]
+      else:
+        return float(x)
+
+    output = convert_to_list(output)
 
   return jsonify(output)
 
