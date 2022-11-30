@@ -29,7 +29,10 @@ else:
     print("Model already initialized")
   except NameError:
     # Define a user_src object which has attributes for init and inference
-    user_src = type('UserSrc', (object,), {'init': init, 'inference': inference})
+    class user_src:
+      init = init
+      inference = inference
+
     print("Initializing model...")
     user_src.init()
 
