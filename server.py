@@ -8,6 +8,8 @@ import subprocess
 import sys
 
 import numpy as np
+import torch as t
+
 from flask import Flask, request, jsonify
 from pyngrok import ngrok
 
@@ -24,17 +26,17 @@ if not 'google.colab' in sys.modules:
 
 else:
 
-  try:
-    user_src
-    print("Model already initialized")
-  except NameError:
-    # Define a user_src object which has attributes for init and inference
-    class user_src:
-      init = init
-      inference = inference
+  class user_src:
+    init = init
+    inference = inference
 
-    print("Initializing model...")
+  try:
+    model
+    print("Model already loaded")
+  except NameError:
+    print("Loading model...")
     user_src.init()
+    print("Model loaded")
 
   # Start the ngrok tunnel
   print("Starting tunnel")
@@ -79,21 +81,37 @@ def healthcheck():
 
 # Inference POST handler at '/' is called for every http call from Banana
 @server.route('/', methods=['POST'])
-def inference():
+def run_inference():
+  global output 
+
   model_inputs = request.get_json()
   print(f"Received request: {model_inputs}")
 
   output = user_src.inference(model_inputs)
   print(f"Sending response: {output}")
 
-  # If the output is an ndarray, convert it to a list (of lists, of lists, etc.)
-  if isinstance(output, np.ndarray):
-    # Go recursively through each dimension and convert to list
+  # If the output is not serializable, try converting it to a serializable type
+  def is_serializable(x):
+    try:
+      json.dumps(x)
+      return True
+    except:
+      return False
+
+  if not is_serializable(output):
+    print(f"Output is {type(output)}, converting to a serializable type")
+    # Go recursively through each dimension and convert
     def convert_to_list(x):
       if isinstance(x, np.ndarray):
+        return x.tolist()
+      elif isinstance(x, t.Tensor):
+        return x.cpu().numpy().tolist()
+      elif isinstance(x, (list, tuple)):
         return [convert_to_list(y) for y in x]
+      elif not is_serializable(x):
+        raise Exception(f"Cannot convert {x} to a serializable type")
       else:
-        return float(x)
+        return x
 
     output = convert_to_list(output)
 
